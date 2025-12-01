@@ -15,7 +15,7 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     Returns:
         List of dicts with 'model' and 'response' keys
     """
-    messages = [{"role": "user", "content": user_query}]
+    messages = [{"role": "system", "content": "You are a helpful assistant."},{"role": "user", "content": user_query}]
 
     # Query all models in parallel
     responses = await query_models_parallel(COUNCIL_MODELS, messages)
@@ -92,7 +92,7 @@ FINAL RANKING:
 
 Now provide your evaluation and ranking:"""
 
-    messages = [{"role": "user", "content": ranking_prompt}]
+    messages = [{"role": "system", "content": "You are a helpful assistant."},{"role": "user", "content": ranking_prompt}]
 
     # Get rankings from all council models in parallel
     responses = await query_models_parallel(COUNCIL_MODELS, messages)
@@ -156,7 +156,9 @@ Your task as Chairman is to synthesize all of this information into a single, co
 
 Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
 
-    messages = [{"role": "user", "content": chairman_prompt}]
+    messages = [
+        {"role": "system", "content": "You are the Chairman of an LLM Council. Your role is to synthesize the collective wisdom of multiple AI models based on their individual responses and peer rankings."},{"role": "user", "content": chairman_prompt}
+    ]
 
     # Query the chairman model
     response = await query_model(CHAIRMAN_MODEL, messages)
@@ -272,10 +274,13 @@ Question: {user_query}
 
 Title:"""
 
-    messages = [{"role": "user", "content": title_prompt}]
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant that generates concise titles for user questions."},
+        {"role": "user", "content": title_prompt}
+    ]
 
     # Use gemini-2.5-flash for title generation (fast and cheap)
-    response = await query_model("google/gemini-2.5-flash", messages, timeout=30.0)
+    response = await query_model("gemini-2.5-flash", messages, timeout=30.0)
 
     if response is None:
         # Fallback to a generic title

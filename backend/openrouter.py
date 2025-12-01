@@ -3,6 +3,7 @@
 import httpx
 from typing import List, Dict, Any, Optional
 from .config import OPENROUTER_API_KEY, OPENROUTER_API_URL
+from openai import OpenAI
 
 
 async def query_model(
@@ -32,21 +33,33 @@ async def query_model(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(
-                OPENROUTER_API_URL,
-                headers=headers,
-                json=payload
-            )
-            response.raise_for_status()
+        # async with httpx.AsyncClient(timeout=timeout) as client:
+        #     response = await client.post(
+        #         OPENROUTER_API_URL,
+        #         headers=headers,
+        #         json=payload
+        #     )
+        #     response.raise_for_status()
 
-            data = response.json()
-            message = data['choices'][0]['message']
+        #     data = response.json()
+        #     message = data['choices'][0]['message']
 
-            return {
-                'content': message.get('content'),
-                'reasoning_details': message.get('reasoning_details')
-            }
+        #     return {
+        #         'content': message.get('content'),
+        #         'reasoning_details': message.get('reasoning_details')
+        #     }
+        client = OpenAI(api_key=OPENROUTER_API_KEY, base_url=OPENROUTER_API_URL)
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=False
+        )
+
+        message = response.choices[0].message
+        return {
+            'content': getattr(message, 'content', None),
+            'reasoning_details': getattr(message, 'reasoning_details', None)
+        }
 
     except Exception as e:
         print(f"Error querying model {model}: {e}")
