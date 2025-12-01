@@ -2,7 +2,19 @@
  * API client for the LLM Council backend.
  */
 
-const API_BASE = 'http://localhost:8001';
+// Automatically use the same host as the frontend, but on port 8001
+const getApiBase = () => {
+  if (import.meta.env.VITE_API_BASE) {
+    return import.meta.env.VITE_API_BASE;
+  }
+
+  // Use the current hostname (works for localhost, 10.60.66.66, mini, etc.)
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  return `${protocol}//${hostname}:8001`;
+};
+
+const API_BASE = getApiBase();
 
 export const api = {
   /**
