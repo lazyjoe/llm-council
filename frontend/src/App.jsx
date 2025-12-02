@@ -9,6 +9,7 @@ function App() {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Load conversations on mount
   useEffect(() => {
@@ -55,6 +56,15 @@ function App() {
 
   const handleSelectConversation = (id) => {
     setCurrentConversationId(id);
+    setIsSidebarOpen(false); // Close sidebar on mobile when selecting conversation
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
   };
 
   const handleSendMessage = async (content) => {
@@ -192,11 +202,29 @@ function App() {
 
   return (
     <div className="app">
+      {/* Mobile hamburger button */}
+      <button
+        className="mobile-menu-btn"
+        onClick={toggleSidebar}
+        aria-label="Toggle menu"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      {/* Backdrop for mobile */}
+      {isSidebarOpen && <div className="sidebar-backdrop" onClick={closeSidebar}></div>}
+
       <Sidebar
         conversations={conversations}
         currentConversationId={currentConversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        isOpen={isSidebarOpen}
+        onClose={closeSidebar}
       />
       <ChatInterface
         conversation={currentConversation}

@@ -161,3 +161,80 @@
   background: #ccc;
   border-color: #ccc;
 }
+
+/* Tablet styles */
+@media (max-width: 1024px) {
+  .messages-container {
+    padding: 20px 16px;
+  }
+
+  .user-message .message-content {
+    max-width: 90%;
+  }
+
+  .input-form {
+    padding: 16px;
+    gap: 10px;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .messages-container {
+    padding: 16px 12px;
+    padding-top: 60px; /* Space for hamburger button */
+  }
+
+  .empty-state h2 {
+    font-size: 20px;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+  }
+
+  .message-group {
+    margin-bottom: 24px;
+  }
+
+  .user-message .message-content {
+    max-width: 100%;
+    padding: 12px;
+    font-size: 15px;
+  }
+
+  .message-label {
+    font-size: 11px;
+  }
+
+  .input-form {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .message-input {
+    padding: 12px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    min-height: 60px;
+    max-height: 200px;
+  }
+
+  .send-button {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+  }
+
+  .loading-indicator,
+  .stage-loading {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+  }
+}

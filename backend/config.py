@@ -18,17 +18,19 @@ TOP_MODELS = [
 
 TEST_MODELS = [
     "grok-4.1-fast",
-    "omni-moderation-latest",
+    # "omni-moderation-latest",
+    'glm-4.5-air:free',
     "glm-4.5-flash",
-    "gemma-3n-e4b-it:free",
+    'ernie-4.5-0.3b',
+    # "gemma-3n-e4b-it:free",
 ]
 
-# COUNCIL_MODELS = TEST_MODELS
-COUNCIL_MODELS = TOP_MODELS
+COUNCIL_MODELS = TEST_MODELS
+# COUNCIL_MODELS = TOP_MODELS
 
 # Chairman model - synthesizes final response
-CHAIRMAN_MODEL = "gemini-3-pro-preview"
-# CHAIRMAN_MODEL = "grok-4.1-fast",
+# CHAIRMAN_MODEL = "gemini-3-pro-preview"
+CHAIRMAN_MODEL = "grok-4.1-fast"
 
 # OpenRouter API endpoint
 OPENROUTER_API_URL = os.getenv("OPENROUTER_API_URL")

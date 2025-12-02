@@ -151,3 +151,98 @@
   color: #999;
   font-size: 12px;
 }
+
+/* Tablet styles */
+@media (max-width: 1024px) {
+  .aggregate-rankings {
+    padding: 14px;
+  }
+
+  .aggregate-item {
+    padding: 8px;
+  }
+
+  .stage2 .tab-content {
+    padding: 14px;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .stage2 h4 {
+    font-size: 13px;
+  }
+
+  .stage-description {
+    font-size: 12px;
+  }
+
+  .aggregate-rankings {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .aggregate-rankings h4 {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .aggregate-item {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .rank-position {
+    font-size: 14px;
+    min-width: 30px;
+  }
+
+  .rank-model {
+    font-size: 12px;
+  }
+
+  .rank-score {
+    font-size: 12px;
+  }
+
+  .stage2 .tabs {
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .stage2 .tab {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .stage2 .tab-content {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .ranking-model {
+    font-size: 11px;
+    margin-bottom: 10px;
+  }
+
+  .ranking-content {
+    font-size: 13px;
+  }
+
+  .parsed-ranking {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .parsed-ranking strong {
+    font-size: 12px;
+  }
+
+  .parsed-ranking li {
+    font-size: 12px;
+  }
+
+  .rank-count {
+    font-size: 11px;
+  }
+}

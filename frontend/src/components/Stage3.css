@@ -23,3 +23,31 @@
   line-height: 1.7;
   font-size: 15px;
 }
+
+/* Tablet styles */
+@media (max-width: 1024px) {
+  .final-response {
+    padding: 16px;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .stage3 {
+    padding: 12px;
+  }
+
+  .final-response {
+    padding: 14px;
+  }
+
+  .chairman-label {
+    font-size: 11px;
+    margin-bottom: 10px;
+  }
+
+  .final-text {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+}
