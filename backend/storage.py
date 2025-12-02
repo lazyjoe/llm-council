@@ -2,20 +2,33 @@
 
 import json
 import os
+import shutil
+import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from pathlib import Path
-from .config import DATA_DIR
+from .config import DATA_DIR, DELETED_DIR
 
 
 def ensure_data_dir():
     """Ensure the data directory exists."""
     Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
+    ensure_deleted_dir()
 
 
 def get_conversation_path(conversation_id: str) -> str:
     """Get the file path for a conversation."""
     return os.path.join(DATA_DIR, f"{conversation_id}.json")
+
+
+def get_deleted_conversation_path(conversation_id: str) -> str:
+    """Get the file path for a deleted conversation."""
+    return os.path.join(DELETED_DIR, f"{conversation_id}.json")
+
+
+def ensure_deleted_dir():
+    """Ensure the deleted directory exists."""
+    Path(DELETED_DIR).mkdir(parents=True, exist_ok=True)
 
 
 def create_conversation(conversation_id: str) -> Dict[str, Any]:
@@ -174,18 +187,24 @@ def update_conversation_title(conversation_id: str, title: str):
 
 def delete_conversation(conversation_id: str) -> bool:
     """
-    Delete a conversation from storage.
+    Soft delete a conversation by moving it to the deleted directory.
 
     Args:
         conversation_id: Conversation identifier
 
     Returns:
-        True if deleted, False if not found
+        True if moved to deleted, False if not found
     """
-    path = get_conversation_path(conversation_id)
+    source_path = get_conversation_path(conversation_id)
+    deleted_path = get_deleted_conversation_path(conversation_id)
 
-    if not os.path.exists(path):
+    if not os.path.exists(source_path):
         return False
 
-    os.remove(path)
-    return True
+    try:
+        ensure_deleted_dir()
+        shutil.move(source_path, deleted_path)
+        return True
+    except Exception as e:
+        logging.error(f"Failed to move conversation {conversation_id} to deleted: {e}")
+        raise

@@ -25,15 +25,18 @@ TEST_MODELS = [
     # "gemma-3n-e4b-it:free",
 ]
 
-COUNCIL_MODELS = TEST_MODELS
-# COUNCIL_MODELS = TOP_MODELS
+# COUNCIL_MODELS = TEST_MODELS
+COUNCIL_MODELS = TOP_MODELS
 
 # Chairman model - synthesizes final response
-# CHAIRMAN_MODEL = "gemini-3-pro-preview"
-CHAIRMAN_MODEL = "grok-4.1-fast"
+CHAIRMAN_MODEL = "gemini-3-pro-preview"
+# CHAIRMAN_MODEL = "grok-4.1-fast"
 
 # OpenRouter API endpoint
 OPENROUTER_API_URL = os.getenv("OPENROUTER_API_URL")
 
 # Data directory for conversation storage
 DATA_DIR = "data/conversations"
+
+# Directory for deleted conversations
+DELETED_DIR = "data/deleted"
