@@ -30,8 +30,8 @@ export default function ChatInterface({
   };
 
   const handleKeyDown = (e) => {
-    // Submit on Enter (without Shift)
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Submit on Cmd+Enter (or Ctrl+Enter on Windows/Linux)
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -123,7 +123,7 @@ export default function ChatInterface({
       <form className="input-form" onSubmit={handleSubmit}>
         <textarea
           className="message-input"
-          placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
+          placeholder="Ask your question... (Cmd+Enter to send, Enter for new line)"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

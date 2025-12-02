@@ -8,9 +8,18 @@ from typing import List, Dict, Any
 import uuid
 import json
 import asyncio
+import logging
+import traceback
 
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="LLM Council API")
 
@@ -130,47 +139,81 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
     Send a message and stream the 3-stage council process.
     Returns Server-Sent Events as each stage completes.
     """
+    logger.info(f"[STREAM START] conversation_id={conversation_id}, content_length={len(request.content)}")
+
     # Check if conversation exists
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
+        logger.error(f"[STREAM ERROR] Conversation not found: {conversation_id}")
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     # Check if this is the first message
     is_first_message = len(conversation["messages"]) == 0
+    logger.info(f"[STREAM] is_first_message={is_first_message}")
 
     async def event_generator():
         try:
+            logger.info("[STREAM] Adding user message")
             # Add user message
             storage.add_user_message(conversation_id, request.content)
 
             # Start title generation in parallel (don't await yet)
             title_task = None
             if is_first_message:
+                logger.info("[STREAM] Starting title generation task")
                 title_task = asyncio.create_task(generate_conversation_title(request.content))
 
             # Stage 1: Collect responses
+            logger.info("[STREAM STAGE1] Starting stage 1")
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
-            stage1_results = await stage1_collect_responses(request.content)
-            yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
+
+            try:
+                stage1_results = await stage1_collect_responses(request.content)
+                logger.info(f"[STREAM STAGE1] Completed - got {len(stage1_results)} responses")
+                yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
+            except Exception as e:
+                logger.error(f"[STREAM STAGE1 ERROR] {str(e)}\n{traceback.format_exc()}")
+                raise
 
             # Stage 2: Collect rankings
+            logger.info("[STREAM STAGE2] Starting stage 2")
             yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
-            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results)
-            aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
-            yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
+
+            try:
+                stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results)
+                aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
+                logger.info(f"[STREAM STAGE2] Completed - got {len(stage2_results)} rankings")
+                yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
+            except Exception as e:
+                logger.error(f"[STREAM STAGE2 ERROR] {str(e)}\n{traceback.format_exc()}")
+                raise
 
             # Stage 3: Synthesize final answer
+            logger.info("[STREAM STAGE3] Starting stage 3")
             yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
-            stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results)
-            yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
+
+            try:
+                stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results)
+                logger.info("[STREAM STAGE3] Completed")
+                yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
+            except Exception as e:
+                logger.error(f"[STREAM STAGE3 ERROR] {str(e)}\n{traceback.format_exc()}")
+                raise
 
             # Wait for title generation if it was started
             if title_task:
-                title = await title_task
-                storage.update_conversation_title(conversation_id, title)
-                yield f"data: {json.dumps({'type': 'title_complete', 'data': {'title': title}})}\n\n"
+                try:
+                    logger.info("[STREAM] Waiting for title generation")
+                    title = await title_task
+                    storage.update_conversation_title(conversation_id, title)
+                    logger.info(f"[STREAM] Title generated: {title}")
+                    yield f"data: {json.dumps({'type': 'title_complete', 'data': {'title': title}})}\n\n"
+                except Exception as e:
+                    logger.error(f"[STREAM TITLE ERROR] {str(e)}\n{traceback.format_exc()}")
+                    # Don't raise - title generation is optional
 
             # Save complete assistant message
+            logger.info("[STREAM] Saving assistant message")
             storage.add_assistant_message(
                 conversation_id,
                 stage1_results,
@@ -179,10 +222,13 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             )
 
             # Send completion event
+            logger.info("[STREAM] Sending complete event")
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+            logger.info("[STREAM END] Successfully completed")
 
         except Exception as e:
             # Send error event
+            logger.error(f"[STREAM FATAL ERROR] {str(e)}\n{traceback.format_exc()}")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(

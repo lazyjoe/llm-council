@@ -95,8 +95,9 @@ function App() {
           case 'stage1_start':
             setCurrentConversation((prev) => {
               const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage1 = true;
+              const lastMsg = { ...messages[messages.length - 1] };
+              lastMsg.loading = { ...lastMsg.loading, stage1: true };
+              messages[messages.length - 1] = lastMsg;
               return { ...prev, messages };
             });
             break;
@@ -104,9 +105,10 @@ function App() {
           case 'stage1_complete':
             setCurrentConversation((prev) => {
               const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
+              const lastMsg = { ...messages[messages.length - 1] };
               lastMsg.stage1 = event.data;
-              lastMsg.loading.stage1 = false;
+              lastMsg.loading = { ...lastMsg.loading, stage1: false };
+              messages[messages.length - 1] = lastMsg;
               return { ...prev, messages };
             });
             break;
@@ -114,8 +116,9 @@ function App() {
           case 'stage2_start':
             setCurrentConversation((prev) => {
               const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage2 = true;
+              const lastMsg = { ...messages[messages.length - 1] };
+              lastMsg.loading = { ...lastMsg.loading, stage2: true };
+              messages[messages.length - 1] = lastMsg;
               return { ...prev, messages };
             });
             break;
@@ -123,10 +126,11 @@ function App() {
           case 'stage2_complete':
             setCurrentConversation((prev) => {
               const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
+              const lastMsg = { ...messages[messages.length - 1] };
               lastMsg.stage2 = event.data;
               lastMsg.metadata = event.metadata;
-              lastMsg.loading.stage2 = false;
+              lastMsg.loading = { ...lastMsg.loading, stage2: false };
+              messages[messages.length - 1] = lastMsg;
               return { ...prev, messages };
             });
             break;
@@ -134,8 +138,9 @@ function App() {
           case 'stage3_start':
             setCurrentConversation((prev) => {
               const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage3 = true;
+              const lastMsg = { ...messages[messages.length - 1] };
+              lastMsg.loading = { ...lastMsg.loading, stage3: true };
+              messages[messages.length - 1] = lastMsg;
               return { ...prev, messages };
             });
             break;
@@ -143,9 +148,10 @@ function App() {
           case 'stage3_complete':
             setCurrentConversation((prev) => {
               const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
+              const lastMsg = { ...messages[messages.length - 1] };
               lastMsg.stage3 = event.data;
-              lastMsg.loading.stage3 = false;
+              lastMsg.loading = { ...lastMsg.loading, stage3: false };
+              messages[messages.length - 1] = lastMsg;
               return { ...prev, messages };
             });
             break;
@@ -170,6 +176,9 @@ function App() {
             console.log('Unknown event type:', eventType);
         }
       });
+
+      // Ensure loading is stopped even if 'complete' event wasn't received
+      setIsLoading(false);
     } catch (error) {
       console.error('Failed to send message:', error);
       // Remove optimistic messages on error
