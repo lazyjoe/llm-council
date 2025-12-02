@@ -9,28 +9,23 @@ load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 # Council members - list of OpenRouter model identifiers
-TOP_MODELS = [
-    "gpt-5.1",
-    "gemini-3-pro-preview",
-    "claude-opus-4-5",
-    "grok-4",
-]
+# Read from .env if available, otherwise use defaults
 
-TEST_MODELS = [
-    "grok-4.1-fast",
-    # "omni-moderation-latest",
-    'glm-4.5-air:free',
-    "glm-4.5-flash",
-    'ernie-4.5-0.3b',
-    # "gemma-3n-e4b-it:free",
-]
+model_group = "COUNCIL_MODELS"
+model_group = "TEST_MODELS"
 
-# COUNCIL_MODELS = TEST_MODELS
-COUNCIL_MODELS = TOP_MODELS
+print(f"Using model group from env: {model_group}")
+
+_council_models_env = os.getenv(model_group)
+if _council_models_env:
+    COUNCIL_MODELS = [m.strip() for m in _council_models_env.split(",")]
+else:
+    # throw exception if not set in .env
+    raise ValueError("COUNCIL_MODELS env var is not set. e.g. COUNCIL_MODELS=grok-4.1-fast,glm-4.5-air:free,glm-4.5-flash,ernie-4.5-0.3b")
 
 # Chairman model - synthesizes final response
-CHAIRMAN_MODEL = "gemini-3-pro-preview"
-# CHAIRMAN_MODEL = "grok-4.1-fast"
+CHAIRMAN_MODEL = os.getenv("CHAIRMAN_MODEL", "grok-4.1-fast")
+print(f"Using chairman model: {CHAIRMAN_MODEL}")
 
 # OpenRouter API endpoint
 OPENROUTER_API_URL = os.getenv("OPENROUTER_API_URL")

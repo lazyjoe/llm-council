@@ -1,9 +1,11 @@
 """OpenRouter API client for making LLM requests."""
 
-import httpx
 from typing import List, Dict, Any, Optional
 from .config import OPENROUTER_API_KEY, OPENROUTER_API_URL
-from openai import OpenAI
+from openai import AsyncOpenAI
+
+# Create a single client instance to reuse across requests
+_client = AsyncOpenAI(api_key=OPENROUTER_API_KEY, base_url=OPENROUTER_API_URL)
 
 
 async def query_model(
@@ -22,37 +24,14 @@ async def query_model(
     Returns:
         Response dict with 'content' and optional 'reasoning_details', or None if failed
     """
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    payload = {
-        "model": model,
-        "messages": messages,
-    }
-
     try:
-        # async with httpx.AsyncClient(timeout=timeout) as client:
-        #     response = await client.post(
-        #         OPENROUTER_API_URL,
-        #         headers=headers,
-        #         json=payload
-        #     )
-        #     response.raise_for_status()
-
-        #     data = response.json()
-        #     message = data['choices'][0]['message']
-
-        #     return {
-        #         'content': message.get('content'),
-        #         'reasoning_details': message.get('reasoning_details')
-        #     }
-        client = OpenAI(api_key=OPENROUTER_API_KEY, base_url=OPENROUTER_API_URL)
-        response = client.chat.completions.create(
+        # log the model being queried
+        print(f"Querying model: {model}")
+        response = await _client.chat.completions.create(
             model=model,
             messages=messages,
-            stream=False
+            stream=False,
+            timeout=timeout
         )
 
         message = response.choices[0].message

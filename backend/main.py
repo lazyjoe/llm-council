@@ -161,6 +161,10 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
     logger.info(f"[STREAM] is_first_message={is_first_message}")
 
     async def event_generator():
+        def safe_json_dumps(obj):
+            """Safely serialize to JSON with proper Unicode handling."""
+            return json.dumps(obj, ensure_ascii=True)
+
         try:
             logger.info("[STREAM] Adding user message")
             # Add user message
@@ -174,37 +178,37 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
 
             # Stage 1: Collect responses
             logger.info("[STREAM STAGE1] Starting stage 1")
-            yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
+            yield f"data: {safe_json_dumps({'type': 'stage1_start'})}\n\n"
 
             try:
                 stage1_results = await stage1_collect_responses(request.content)
                 logger.info(f"[STREAM STAGE1] Completed - got {len(stage1_results)} responses")
-                yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
+                yield f"data: {safe_json_dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
             except Exception as e:
                 logger.error(f"[STREAM STAGE1 ERROR] {str(e)}\n{traceback.format_exc()}")
                 raise
 
             # Stage 2: Collect rankings
             logger.info("[STREAM STAGE2] Starting stage 2")
-            yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
+            yield f"data: {safe_json_dumps({'type': 'stage2_start'})}\n\n"
 
             try:
                 stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results)
                 aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
                 logger.info(f"[STREAM STAGE2] Completed - got {len(stage2_results)} rankings")
-                yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
+                yield f"data: {safe_json_dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
             except Exception as e:
                 logger.error(f"[STREAM STAGE2 ERROR] {str(e)}\n{traceback.format_exc()}")
                 raise
 
             # Stage 3: Synthesize final answer
             logger.info("[STREAM STAGE3] Starting stage 3")
-            yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
+            yield f"data: {safe_json_dumps({'type': 'stage3_start'})}\n\n"
 
             try:
                 stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results)
                 logger.info("[STREAM STAGE3] Completed")
-                yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
+                yield f"data: {safe_json_dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
             except Exception as e:
                 logger.error(f"[STREAM STAGE3 ERROR] {str(e)}\n{traceback.format_exc()}")
                 raise
@@ -216,7 +220,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                     title = await title_task
                     storage.update_conversation_title(conversation_id, title)
                     logger.info(f"[STREAM] Title generated: {title}")
-                    yield f"data: {json.dumps({'type': 'title_complete', 'data': {'title': title}})}\n\n"
+                    yield f"data: {safe_json_dumps({'type': 'title_complete', 'data': {'title': title}})}\n\n"
                 except Exception as e:
                     logger.error(f"[STREAM TITLE ERROR] {str(e)}\n{traceback.format_exc()}")
                     # Don't raise - title generation is optional
@@ -232,13 +236,13 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
 
             # Send completion event
             logger.info("[STREAM] Sending complete event")
-            yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+            yield f"data: {safe_json_dumps({'type': 'complete'})}\n\n"
             logger.info("[STREAM END] Successfully completed")
 
         except Exception as e:
             # Send error event
             logger.error(f"[STREAM FATAL ERROR] {str(e)}\n{traceback.format_exc()}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            yield f"data: {safe_json_dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(
         event_generator(),
