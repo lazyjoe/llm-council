@@ -59,6 +59,30 @@ function App() {
     setIsSidebarOpen(false); // Close sidebar on mobile when selecting conversation
   };
 
+  const handleDeleteConversation = async (id) => {
+    try {
+      await api.deleteConversation(id);
+      
+      // Remove from conversations list
+      setConversations(conversations.filter(conv => conv.id !== id));
+      
+      // If the deleted conversation was currently selected, clear it
+      if (currentConversationId === id) {
+        setCurrentConversationId(null);
+        setCurrentConversation(null);
+        
+        // Optionally, select the first available conversation
+        const remainingConversations = conversations.filter(conv => conv.id !== id);
+        if (remainingConversations.length > 0) {
+          setCurrentConversationId(remainingConversations[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+      alert('Failed to delete conversation. Please try again.');
+    }
+  };
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
@@ -223,6 +247,7 @@ function App() {
         currentConversationId={currentConversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        onDeleteConversation={handleDeleteConversation}
         isOpen={isSidebarOpen}
         onClose={closeSidebar}
       />
