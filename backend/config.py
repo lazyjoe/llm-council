@@ -11,8 +11,8 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 # Council members - list of OpenRouter model identifiers
 # Read from .env if available, otherwise use defaults
 
-model_group = "COUNCIL_MODELS"
-model_group = "TEST_MODELS"
+is_testing = os.getenv("TESTING", "false").lower() == "true"
+model_group = "TEST_MODELS" if is_testing else "COUNCIL_MODELS"
 
 print(f"Using model group from env: {model_group}")
 
