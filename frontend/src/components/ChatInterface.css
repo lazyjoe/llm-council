@@ -2,13 +2,18 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* Don't force 100vh here — let the parent control height so children
+     can scroll correctly on mobile. Setting min-height:0 allows the
+     messages container to shrink and enable its own scrolling. */
+  min-height: 0;
   background: #ffffff;
 }
 
 .messages-container {
   flex: 1;
   overflow-y: auto;
+  /* Smooth, native-like scrolling on iOS/Android */
+  -webkit-overflow-scrolling: touch;
   padding: 24px;
 }
 
@@ -60,6 +65,9 @@
   line-height: 1.6;
   max-width: 80%;
   white-space: pre-wrap;
+  /* Break long words/URLs instead of overflowing the container */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .loading-indicator {
@@ -123,6 +131,8 @@
   resize: vertical;
   min-height: 80px;
   max-height: 300px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .message-input:focus {
