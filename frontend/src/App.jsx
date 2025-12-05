@@ -62,15 +62,15 @@ function App() {
   const handleDeleteConversation = async (id) => {
     try {
       await api.deleteConversation(id);
-      
+
       // Remove from conversations list
       setConversations(conversations.filter(conv => conv.id !== id));
-      
+
       // If the deleted conversation was currently selected, clear it
       if (currentConversationId === id) {
         setCurrentConversationId(null);
         setCurrentConversation(null);
-        
+
         // Optionally, select the first available conversation
         const remainingConversations = conversations.filter(conv => conv.id !== id);
         if (remainingConversations.length > 0) {
@@ -89,6 +89,157 @@ function App() {
 
   const closeSidebar = () => {
     setIsSidebarOpen(false);
+  };
+
+  const handleRetryStage2 = async (messageIndex) => {
+    if (!currentConversationId) return;
+
+    setCurrentConversation((prev) => {
+      const messages = [...prev.messages];
+      messages[messageIndex] = {
+        ...messages[messageIndex],
+        retrying: true,
+        loading: { stage1: false, stage2: true, stage3: false },
+      };
+      return { ...prev, messages };
+    });
+
+    try {
+      await api.retryStage2Stream(currentConversationId, (eventType, event) => {
+        switch (eventType) {
+          case 'stage2_complete':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              messages[messageIndex] = {
+                ...messages[messageIndex],
+                stage2: event.data,
+                metadata: event.metadata,
+                loading: { ...messages[messageIndex].loading, stage2: false, stage3: true },
+              };
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage3_complete':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              messages[messageIndex] = {
+                ...messages[messageIndex],
+                stage3: event.data,
+                retrying: false,
+                loading: { stage1: false, stage2: false, stage3: false },
+              };
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'complete':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              messages[messageIndex] = {
+                ...messages[messageIndex],
+                retrying: false,
+                loading: { stage1: false, stage2: false, stage3: false },
+              };
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'error':
+            console.error('Retry Stage 2 error:', event.message);
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              messages[messageIndex] = {
+                ...messages[messageIndex],
+                retrying: false,
+                loading: { stage1: false, stage2: false, stage3: false },
+              };
+              return { ...prev, messages };
+            });
+            break;
+        }
+      });
+    } catch (error) {
+      console.error('Failed to retry Stage 2:', error);
+      setCurrentConversation((prev) => {
+        const messages = [...prev.messages];
+        messages[messageIndex] = {
+          ...messages[messageIndex],
+          retrying: false,
+          loading: { stage1: false, stage2: false, stage3: false },
+        };
+        return { ...prev, messages };
+      });
+    }
+  };
+
+  const handleRetryStage3 = async (messageIndex) => {
+    if (!currentConversationId) return;
+
+    setCurrentConversation((prev) => {
+      const messages = [...prev.messages];
+      messages[messageIndex] = {
+        ...messages[messageIndex],
+        retrying: true,
+        loading: { stage1: false, stage2: false, stage3: true },
+      };
+      return { ...prev, messages };
+    });
+
+    try {
+      await api.retryStage3Stream(currentConversationId, (eventType, event) => {
+        switch (eventType) {
+          case 'stage3_complete':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              messages[messageIndex] = {
+                ...messages[messageIndex],
+                stage3: event.data,
+                retrying: false,
+                loading: { stage1: false, stage2: false, stage3: false },
+              };
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'complete':
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              messages[messageIndex] = {
+                ...messages[messageIndex],
+                retrying: false,
+                loading: { stage1: false, stage2: false, stage3: false },
+              };
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'error':
+            console.error('Retry Stage 3 error:', event.message);
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              messages[messageIndex] = {
+                ...messages[messageIndex],
+                retrying: false,
+                loading: { stage1: false, stage2: false, stage3: false },
+              };
+              return { ...prev, messages };
+            });
+            break;
+        }
+      });
+    } catch (error) {
+      console.error('Failed to retry Stage 3:', error);
+      setCurrentConversation((prev) => {
+        const messages = [...prev.messages];
+        messages[messageIndex] = {
+          ...messages[messageIndex],
+          retrying: false,
+          loading: { stage1: false, stage2: false, stage3: false },
+        };
+        return { ...prev, messages };
+      });
+    }
   };
 
   const handleSendMessage = async (content) => {
@@ -254,6 +405,8 @@ function App() {
       <ChatInterface
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
+        onRetryStage2={handleRetryStage2}
+        onRetryStage3={handleRetryStage3}
         isLoading={isLoading}
       />
     </div>

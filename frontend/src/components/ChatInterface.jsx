@@ -8,6 +8,8 @@ import './ChatInterface.css';
 export default function ChatInterface({
   conversation,
   onSendMessage,
+  onRetryStage2,
+  onRetryStage3,
   isLoading,
 }) {
   const [input, setInput] = useState('');
@@ -93,6 +95,8 @@ export default function ChatInterface({
                       rankings={msg.stage2}
                       labelToModel={msg.metadata?.label_to_model}
                       aggregateRankings={msg.metadata?.aggregate_rankings}
+                      onRetry={() => onRetryStage2(index)}
+                      isRetrying={msg.retrying && msg.loading?.stage2}
                     />
                   )}
 
@@ -103,7 +107,13 @@ export default function ChatInterface({
                       <span>Running Stage 3: Final synthesis...</span>
                     </div>
                   )}
-                  {msg.stage3 && <Stage3 finalResponse={msg.stage3} />}
+                  {msg.stage3 && (
+                    <Stage3
+                      finalResponse={msg.stage3}
+                      onRetry={() => onRetryStage3(index)}
+                      isRetrying={msg.retrying && msg.loading?.stage3}
+                    />
+                  )}
                 </div>
               )}
             </div>

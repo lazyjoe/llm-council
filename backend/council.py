@@ -109,6 +109,16 @@ Now provide your evaluation and ranking:"""
                 "parsed_ranking": parsed
             })
 
+    # Check if we got any valid rankings
+    if len(stage2_results) == 0:
+        # Return error indicator instead of raising exception
+        stage2_results = [{
+            "model": "system",
+            "ranking": "Error: Unable to collect rankings from any model.",
+            "parsed_ranking": [],
+            "error": True
+        }]
+
     return stage2_results, label_to_model
 
 

@@ -98,6 +98,169 @@ async def delete_conversation(conversation_id: str):
     return {"status": "deleted", "conversation_id": conversation_id}
 
 
+@app.post("/api/conversations/{conversation_id}/retry-stage2/stream")
+async def retry_stage2_stream(conversation_id: str):
+    """
+    Retry Stage 2 and Stage 3 for the last assistant message.
+    Streams updates via Server-Sent Events.
+    """
+    logger.info(f"[RETRY STAGE2] conversation_id={conversation_id}")
+
+    # Get conversation
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Find last assistant message with stage1 data
+    last_msg = None
+    msg_index = -1
+    for i in range(len(conversation["messages"]) - 1, -1, -1):
+        msg = conversation["messages"][i]
+        if msg["role"] == "assistant" and msg.get("stage1"):
+            last_msg = msg
+            msg_index = i
+            break
+
+    if not last_msg:
+        raise HTTPException(status_code=400, detail="No valid message to retry")
+
+    # Get original user query (message before last assistant)
+    user_msg_idx = msg_index - 1
+    if user_msg_idx < 0:
+        raise HTTPException(status_code=400, detail="Cannot find original user query")
+    user_query = conversation["messages"][user_msg_idx]["content"]
+    stage1_results = last_msg["stage1"]
+
+    async def event_generator():
+        def safe_json_dumps(obj):
+            return json.dumps(obj, ensure_ascii=True)
+
+        try:
+            # Stage 2: Re-collect rankings
+            logger.info("[RETRY STAGE2] Starting stage 2")
+            yield f"data: {safe_json_dumps({'type': 'stage2_start'})}\n\n"
+
+            stage2_results, label_to_model = await stage2_collect_rankings(user_query, stage1_results)
+            aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
+            logger.info(f"[RETRY STAGE2] Completed - got {len(stage2_results)} rankings")
+            yield f"data: {safe_json_dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
+
+            # Stage 3: Synthesize final answer
+            logger.info("[RETRY STAGE3] Starting stage 3")
+            yield f"data: {safe_json_dumps({'type': 'stage3_start'})}\n\n"
+
+            stage3_result = await stage3_synthesize_final(user_query, stage1_results, stage2_results)
+            logger.info("[RETRY STAGE3] Completed")
+
+            # Check if stage3 result contains an error
+            if stage3_result.get("response", "").startswith("Error:"):
+                logger.error(f"[RETRY STAGE2->STAGE3] Stage 3 returned error: {stage3_result['response']}")
+                yield f"data: {safe_json_dumps({'type': 'error', 'message': stage3_result['response']})}\n\n"
+                return
+
+            yield f"data: {safe_json_dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
+
+            # Update the message in storage
+            last_msg["stage2"] = stage2_results
+            last_msg["stage3"] = stage3_result
+            if "metadata" not in last_msg:
+                last_msg["metadata"] = {}
+            last_msg["metadata"]["label_to_model"] = label_to_model
+            last_msg["metadata"]["aggregate_rankings"] = aggregate_rankings
+            storage.save_conversation(conversation)
+
+            yield f"data: {safe_json_dumps({'type': 'complete'})}\n\n"
+            logger.info("[RETRY STAGE2] Successfully completed")
+
+        except Exception as e:
+            logger.error(f"[RETRY STAGE2 ERROR] {str(e)} {traceback.format_exc()}")
+            yield f"data: {safe_json_dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
+
+@app.post("/api/conversations/{conversation_id}/retry-stage3/stream")
+async def retry_stage3_stream(conversation_id: str):
+    """
+    Retry only Stage 3 for the last assistant message.
+    Streams updates via Server-Sent Events.
+    """
+    logger.info(f"[RETRY STAGE3] conversation_id={conversation_id}")
+
+    # Get conversation
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Find last assistant message with stage1 and stage2 data
+    last_msg = None
+    msg_index = -1
+    for i in range(len(conversation["messages"]) - 1, -1, -1):
+        msg = conversation["messages"][i]
+        if msg["role"] == "assistant" and msg.get("stage1") and msg.get("stage2"):
+            last_msg = msg
+            msg_index = i
+            break
+
+    if not last_msg:
+        raise HTTPException(status_code=400, detail="No valid message to retry")
+
+    # Get original user query (message before last assistant)
+    user_msg_idx = msg_index - 1
+    if user_msg_idx < 0:
+        raise HTTPException(status_code=400, detail="Cannot find original user query")
+    user_query = conversation["messages"][user_msg_idx]["content"]
+    stage1_results = last_msg["stage1"]
+    stage2_results = last_msg["stage2"]
+
+    async def event_generator():
+        def safe_json_dumps(obj):
+            return json.dumps(obj, ensure_ascii=True)
+
+        try:
+            # Stage 3: Re-synthesize final answer
+            logger.info("[RETRY STAGE3] Starting stage 3")
+            yield f"data: {safe_json_dumps({'type': 'stage3_start'})}\n\n"
+
+            stage3_result = await stage3_synthesize_final(user_query, stage1_results, stage2_results)
+            logger.info("[RETRY STAGE3] Completed")
+
+            # Check if stage3 result contains an error
+            if stage3_result.get("response", "").startswith("Error:"):
+                logger.error(f"[RETRY STAGE3] Stage 3 returned error: {stage3_result['response']}")
+                yield f"data: {safe_json_dumps({'type': 'error', 'message': stage3_result['response']})}\n\n"
+                return
+
+            yield f"data: {safe_json_dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
+
+            # Update the message in storage
+            last_msg["stage3"] = stage3_result
+            storage.save_conversation(conversation)
+
+            yield f"data: {safe_json_dumps({'type': 'complete'})}\n\n"
+            logger.info("[RETRY STAGE3] Successfully completed")
+
+        except Exception as e:
+            logger.error(f"[RETRY STAGE3 ERROR] {str(e)} {traceback.format_exc()}")
+            yield f"data: {safe_json_dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
+
 @app.post("/api/conversations/{conversation_id}/message")
 async def send_message(conversation_id: str, request: SendMessageRequest):
     """
@@ -208,6 +371,13 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             try:
                 stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results)
                 logger.info("[STREAM STAGE3] Completed")
+
+                # Check if stage3 result contains an error
+                if stage3_result.get("response", "").startswith("Error:"):
+                    logger.error(f"[STREAM STAGE3] Stage 3 returned error: {stage3_result['response']}")
+                    yield f"data: {safe_json_dumps({'type': 'error', 'message': stage3_result['response']})}\n\n"
+                    return
+
                 yield f"data: {safe_json_dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
             except Exception as e:
                 logger.error(f"[STREAM STAGE3 ERROR] {str(e)}\n{traceback.format_exc()}")

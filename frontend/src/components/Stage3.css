@@ -3,6 +3,47 @@
   border-color: #c8e6c8;
 }
 
+.stage3.error-state {
+  background: #fff0f0;
+  border-color: #f0a0a0;
+}
+
+.stage3 .retry-container {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #f0a0a0;
+  text-align: center;
+}
+
+.stage3 .retry-button {
+  padding: 10px 24px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 44px;
+}
+
+.stage3 .retry-button:hover:not(:disabled) {
+  background: #357abd;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+}
+
+.stage3 .retry-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.stage3 .retry-button:disabled {
+  background: #b0b0b0;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .final-response {
   background: #ffffff;
   padding: 20px;
@@ -29,6 +70,16 @@
   .final-response {
     padding: 16px;
   }
+
+  .stage3 .retry-container {
+    padding-top: 16px;
+    margin-top: 16px;
+  }
+
+  .stage3 .retry-button {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
 }
 
 /* Mobile styles */
@@ -49,5 +100,16 @@
   .final-text {
     font-size: 14px;
     line-height: 1.6;
+  }
+
+  .stage3 .retry-container {
+    padding-top: 14px;
+    margin-top: 14px;
+  }
+
+  .stage3 .retry-button {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
   }
 }

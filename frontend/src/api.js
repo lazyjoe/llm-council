@@ -166,4 +166,142 @@ export const api = {
     }
     return response.json();
   },
+
+  /**
+   * Retry Stage 2 and Stage 3 for a conversation.
+   * @param {string} conversationId - The conversation ID
+   * @param {function} onEvent - Callback function for each event: (eventType, data) => void
+   * @returns {Promise<void>}
+   */
+  async retryStage2Stream(conversationId, onEvent) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/retry-stage2/stream`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to retry stage 2');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('data: ')) {
+          const data = trimmedLine.slice(6);
+          if (data) {
+            try {
+              const event = JSON.parse(data);
+              onEvent(event.type, event);
+            } catch (e) {
+              console.error('Failed to parse SSE event:', e);
+              console.error('Failed event data:', data);
+            }
+          }
+        }
+      }
+    }
+
+    if (buffer.trim()) {
+      const trimmedLine = buffer.trim();
+      if (trimmedLine.startsWith('data: ')) {
+        const data = trimmedLine.slice(6);
+        if (data) {
+          try {
+            const event = JSON.parse(data);
+            onEvent(event.type, event);
+          } catch (e) {
+            console.error('Failed to parse final SSE event:', e);
+            console.error('Failed event data:', data);
+          }
+        }
+      }
+    }
+  },
+
+  /**
+   * Retry only Stage 3 for a conversation.
+   * @param {string} conversationId - The conversation ID
+   * @param {function} onEvent - Callback function for each event: (eventType, data) => void
+   * @returns {Promise<void>}
+   */
+  async retryStage3Stream(conversationId, onEvent) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/retry-stage3/stream`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to retry stage 3');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('data: ')) {
+          const data = trimmedLine.slice(6);
+          if (data) {
+            try {
+              const event = JSON.parse(data);
+              onEvent(event.type, event);
+            } catch (e) {
+              console.error('Failed to parse SSE event:', e);
+              console.error('Failed event data:', data);
+            }
+          }
+        }
+      }
+    }
+
+    if (buffer.trim()) {
+      const trimmedLine = buffer.trim();
+      if (trimmedLine.startsWith('data: ')) {
+        const data = trimmedLine.slice(6);
+        if (data) {
+          try {
+            const event = JSON.parse(data);
+            onEvent(event.type, event);
+          } catch (e) {
+            console.error('Failed to parse final SSE event:', e);
+            console.error('Failed event data:', data);
+          }
+        }
+      }
+    }
+  },
 };

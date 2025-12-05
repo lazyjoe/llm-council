@@ -14,15 +14,18 @@ function deAnonymizeText(text, labelToModel) {
   return result;
 }
 
-export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
+export default function Stage2({ rankings, labelToModel, aggregateRankings, onRetry, isRetrying }) {
   const [activeTab, setActiveTab] = useState(0);
 
   if (!rankings || rankings.length === 0) {
     return null;
   }
 
+  // Check if this is an error state
+  const hasError = rankings.some(r => r.error || r.ranking?.startsWith('Error:'));
+
   return (
-    <div className="stage stage2">
+    <div className={`stage stage2 ${hasError ? 'error-state' : ''}`}>
       <h3 className="stage-title">Stage 2: Peer Rankings</h3>
 
       <h4>Raw Evaluations</h4>
@@ -92,6 +95,19 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {hasError && onRetry && (
+        <div className="retry-container">
+          <p className="error-message">Failed to collect rankings from models.</p>
+          <button
+            className="retry-button"
+            onClick={onRetry}
+            disabled={isRetrying}
+          >
+            {isRetrying ? 'Retrying Stage 2...' : 'Retry Stage 2'}
+          </button>
         </div>
       )}
     </div>
